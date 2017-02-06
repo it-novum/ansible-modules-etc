@@ -1,2 +1,2 @@
-# ansible-modules-etc
+# Ansible modules etc - A collection of ansible modules
 
