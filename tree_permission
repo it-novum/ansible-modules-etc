@@ -173,7 +173,7 @@ def collect_path_data(path):
     is_dir = os.path.isdir(path)
     return {
         "path": path,
-        "mode": path_stat.st_mode & 0777,
+        "mode": path_stat.st_mode & 07777,
         "uid": path_stat.st_uid,
         "gid": path_stat.st_gid,
         "isdir": is_dir,
@@ -216,13 +216,23 @@ def to_bool(arg):
         fail_json(msg='{} is not a valid boolean!'.format(str(arg)))
 
 
+def to_mode(value):
+    if value is None:
+        return value
+    if not isinstance(value, int):
+        try:
+            value = int(value, 8)
+        except (ValueError, TypeError):
+            fail_json('Not an integer: {}'.format(str(value)))
+    return value
+
 
 class PermissionRegex:
 
     def __init__(self, root_path, kwargs):
         self.paths = try_kwarg(kwargs, 'paths', required=True)
-        self.file_mode = try_kwarg(kwargs, 'file_mode')
-        self.dir_mode = try_kwarg(kwargs, 'dir_mode')
+        self.file_mode = to_mode(try_kwarg(kwargs, 'file_mode'))
+        self.dir_mode = to_mode(try_kwarg(kwargs, 'dir_mode'))
         self.file_owner = try_kwarg(kwargs, 'file_owner')
         self.file_group = try_kwarg(kwargs, 'file_group')
         self.dir_owner = try_kwarg(kwargs, 'dir_owner')
