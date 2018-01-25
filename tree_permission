@@ -154,6 +154,13 @@ import re
 import pwd
 import grp
 
+debug = False
+changed_list = []
+
+
+def add_to_changed_list(path):
+    if debug:
+        changed_list.append(path)
 
 def fail_json(msg, **args):
     json.dump(dict(failed=True, msg=msg, **args), sys.stdout)
@@ -281,32 +288,38 @@ class PermissionRegex:
         if path_data['isfile']:
             if self.file_mode is not None and path_data['mode'] != self.file_mode:
                 changed = True
+                add_to_changed_list(path_data['path'])
                 if change_mode:
                     os.chmod(path_data['path'], self.file_mode)
                     path_data['mode'] = self.file_mode
             if self.file_uid is not None and path_data['uid'] != self.file_uid:
                 changed = True
+                add_to_changed_list(path_data['path'])
                 if change_mode:
                     os.chown(path_data['path'], self.file_uid, path_data['gid'])
                     path_data['uid'] = self.file_uid
             if self.file_gid is not None and path_data['gid'] != self.file_gid:
                 changed = True
+                add_to_changed_list(path_data['path'])
                 if change_mode:
                     os.chown(path_data['path'], path_data['uid'], self.file_gid)
                     path_data['gid'] = self.file_gid
         elif path_data['isdir']:
             if self.dir_mode is not None and path_data['mode'] != self.dir_mode:
                 changed = True
+                add_to_changed_list(path_data['path'])
                 if change_mode:
                     os.chmod(path_data['path'], self.dir_mode)
                     path_data['mode'] = self.dir_mode
             if self.dir_uid is not None and path_data['uid'] != self.dir_uid:
                 changed = True
+                add_to_changed_list(path_data['path'])
                 if change_mode:
                     os.chown(path_data['path'], self.dir_uid, path_data['gid'])
                     path_data['uid'] = self.dir_uid
             if self.dir_gid is not None and path_data['gid'] != self.dir_gid:
                 changed = True
+                add_to_changed_list(path_data['path'])
                 if change_mode:
                     os.chown(path_data['path'], path_data['uid'], self.dir_gid)
                     path_data['gid'] = self.dir_gid
@@ -314,11 +327,18 @@ class PermissionRegex:
 
 
 def main():
+    global debug
+
     args = None
     with open(sys.argv[1]) as f:
         args = json.load(f, encoding='UTF-8', object_pairs_hook=OrderedDict)
     change_mode = True
     changed = False
+
+    try:
+        debug = to_bool(args['debug'])
+    except KeyError:
+        debug = False
 
     try:
         root_path = args['root_path']
@@ -349,7 +369,10 @@ def main():
         except StopIteration:
             pass
 
-    json.dump({'changed': changed}, sys.stdout)
+    result = {'changed': changed}
+    if debug:
+        result['changed_list'] = changed_list
+    json.dump(result, sys.stdout)
 
 
 if __name__ == '__main__':
