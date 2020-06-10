@@ -180,7 +180,7 @@ def collect_path_data(path):
     is_dir = os.path.isdir(path)
     return {
         "path": path,
-        "mode": path_stat.st_mode & 07777,
+        "mode": path_stat.st_mode & 4095, # octal 0777
         "uid": path_stat.st_uid,
         "gid": path_stat.st_gid,
         "isdir": is_dir,
@@ -196,7 +196,6 @@ def iterate_fstree(path):
             allpaths = dirs + files
             for current_path in allpaths:
                 yield collect_path_data(normpath(os.path.join(root, current_path)))
-    raise StopIteration()
 
 
 def try_kwarg(kwargs, key, default_value=None, required=False):
@@ -361,13 +360,10 @@ def main():
         regexp.insert(0, PermissionRegex(args['root_path'], data))
 
     for fspath in iterate_fstree(args['root_path']):
-        try:
-            for pr in regexp:
-                if pr.check_path(fspath):
-                    changed = pr.apply(fspath, change_mode, changed)
-                    raise StopIteration()
-        except StopIteration:
-            pass
+        for pr in regexp:
+            if pr.check_path(fspath):
+                changed = pr.apply(fspath, change_mode, changed)
+                break
 
     result = {'changed': changed}
     if debug:
